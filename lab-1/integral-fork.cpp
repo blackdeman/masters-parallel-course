@@ -73,10 +73,9 @@ int main(int argc, char *argv[]) {
         }
 
         // child calculation
-	// TODO change calculation method 
         double sum = 0.;
         for (double i = left; i < right; i += step) {
-            sum += step * func(i + step / 2);
+            sum += step * func(i);
         }
         ((double*)shm)[processId - 1] = sum;
 
