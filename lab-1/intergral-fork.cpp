@@ -20,15 +20,16 @@ int main(int argc, char *argv[]) {
     const double a = 0;
     const double b = 1;
 
-    const size_t p = (size_t) atoi(argv[1]);
-    const size_t m = 1000;
+    const int p = atoi(argv[1]);
+    const int m = 10000;
 
     const double step = (b - a) / m;
 
     const size_t shmsize = p * sizeof(double);
 
     int processId = 0;
-    double left, right;
+    double left;
+    int steps;
 
     key_t key = 2468;
     pid_t pid;
@@ -45,10 +46,10 @@ int main(int argc, char *argv[]) {
     pid_t* children = (pid_t *) malloc(sizeof(pid_t) * p);
 
     // fork chuldren and collect ids for waiting
-    for (size_t i = 0; i < p; ++i) {
+    for (int i = 0; i < p; ++i) {
         processId = i + 1;
         left = a + i * m / p * step;
-        right = a + (i + 1) * m / p * step < b ? a + (i + 1) * m / p * step : b;
+        steps = m / p;
 
         if ((pid = fork()) == -1) {
             perror("fork");
@@ -64,7 +65,7 @@ int main(int argc, char *argv[]) {
 
     if (pid == 0) {
         // child process
-        printf("Child id = %d started calculation from %.3f to %.3f\n", processId, left, right);
+        printf("Child id = %d started calculation start %.3f, count %d\n", processId, left, steps);
 
         // attach shared memory
         if ((shm = shmat(shmid, NULL, 0)) == (void *) -1) {
@@ -74,8 +75,9 @@ int main(int argc, char *argv[]) {
 
         // child calculation
         double sum = 0.;
-        for (double i = left; i < right; i += step) {
-            sum += step * func(i);
+        // left rectangle method
+        for (double i = 0; i < steps; ++i) {
+            sum += step * func(left + i * step);
         }
         ((double*)shm)[processId - 1] = sum;
 
@@ -136,5 +138,5 @@ int main(int argc, char *argv[]) {
         return exitCode;
     }
 
-   return 0;
+    return 0;
 }
