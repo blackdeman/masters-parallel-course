@@ -74,8 +74,8 @@ int main(int argc, char** argv) {
             matrix_part[i * B + k] = buffer[k] + 1;
         }
 
-        if (i > 0)
-            MPI_Irecv(buffer, B, MPI_INT, prev_proc, tag, MPI_COMM_WORLD, &recv_request);
+
+        MPI_Irecv(buffer, B, MPI_INT, prev_proc, tag, MPI_COMM_WORLD, &recv_request);
 
         for (int j = 1; j < rows_per_proc; ++j) {
             for (int k = 0; k < B; ++k) {
@@ -83,8 +83,8 @@ int main(int argc, char** argv) {
             }
         }
 
-        // actually we don't need to wait
-        // MPI_Wait(&send_request, &status);
+        // seems like we don't need to wait, but anyway
+        MPI_Wait(&send_request, &status);
         MPI_Isend(matrix_part + (rows_per_proc - 1) * N2 + i * B, B, MPI_INT, next_proc, tag, MPI_COMM_WORLD, &send_request);
     }
 
