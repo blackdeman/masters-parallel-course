@@ -47,20 +47,20 @@ int main() {
         return 1;
     }
 
-    sembuf operations[2];
+    sembuf ops[2];
 
     while (!stopping) {
-        operations[0].sem_num = 0;
-        operations[0].sem_op = 0;
-        operations[0].sem_flg = 0;
+        ops[0].sem_num = 0;
+        ops[0].sem_op = 0;
+        ops[0].sem_flg = 0;
 
-        operations[1].sem_num = 0;
-        operations[1].sem_op = 1;
-        operations[1].sem_flg = 0;
+        ops[1].sem_num = 0;
+        ops[1].sem_op = 1;
+        ops[1].sem_flg = 0;
 
 
         printf("Trying to get semaphore...\n");
-        if (semop(semid, operations, 2) == -1) {
+        if (semop(semid, ops, 2) == -1) {
             fprintf(stderr, "semop failed\n");
             exit(1);
         }
@@ -69,11 +69,11 @@ int main() {
         fgets((char *) shm, message_len, stdin);
         ((char *) shm)[strlen((char *) shm) - 1] = '\0';
 
-        operations[0].sem_num = 1;
-        operations[0].sem_op = 1;
-        operations[0].sem_flg = 0;
+        ops[0].sem_num = 1;
+        ops[0].sem_op = 1;
+        ops[0].sem_flg = 0;
 
-        if (semop(semid, operations, 1) == -1) {
+        if (semop(semid, ops, 1) == -1) {
             fprintf(stderr, "semop failed\n");
             exit(1);
         }
