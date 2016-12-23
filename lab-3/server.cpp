@@ -6,20 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-static volatile int stopping = 0;
-
-void sig_handler(int sig) {
-    if (sig == SIGINT) {
-        stopping = 1;
-    }
-}
-
 int main() {
-
-    if (signal(SIGINT, sig_handler) == SIG_ERR) {
-        perror("signal");
-        return 1;
-    }
 
     size_t message_len = 100;
 
@@ -47,37 +34,35 @@ int main() {
         return 1;
     }
 
-    // set semaphore value
-    if (semctl(semid, 0, SETVAL, 0) == -1) {
+    int initvals[2] = {0, 0};
+    // set semaphore values
+    if (semctl(semid, 0, SETALL, initvals) == -1) {
         perror("semctl setval");
         exit(1);
     }
-    if (semctl(semid, 1, SETVAL, 0) == -1) {
-        perror("semctl setval");
-        exit(1);
-    }
 
-    sembuf *ops = new sembuf();
+    struct sembuf sops[1];
 
-    while (!stopping) {
-
-        ops->sem_num = 1;
-        ops->sem_op = -1;
-        ops->sem_flg = 0;
+    while (1) {
+	// waiting for some client to write message
+        sops[0].sem_num = 1;
+        sops[0].sem_op = -1;
+        sops[0].sem_flg = 0;
 
         printf("Waiting for messages...\n");
-        if (semop(semid, ops, 1) == -1) {
+        if (semop(semid, sops, 1) == -1) {
             perror("semop 1");
             return 1;
         }
 
-        printf("Recieved:\n %s\n", (char *) shm);
+        printf("Recieved:\n%s\n", (char *) shm);
 
-        ops->sem_num = 0;
-        ops->sem_op = -1;
-        ops->sem_flg = 0;
+	// message was read, allow clients to get semaphore
+        sops[0].sem_num = 0;
+        sops[0].sem_op = -1;
+        sops[0].sem_flg = 0;
 
-        if (semop(semid, ops, 1) == -1) {
+        if (semop(semid, sops, 1) == -1) {
             perror("semop 2");
             return 1;
         }

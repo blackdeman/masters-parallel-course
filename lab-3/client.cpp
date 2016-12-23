@@ -6,20 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static volatile int stopping = 0;
-
-void sig_handler(int sig) {
-    if (sig == SIGINT) {
-        stopping = 1;
-    }
-}
-
 int main() {
-
-    if (signal(SIGINT, sig_handler) == SIG_ERR) {
-        perror("signal");
-        return 1;
-    }
 
     int message_len = 100;
 
@@ -47,20 +34,21 @@ int main() {
         return 1;
     }
 
-    sembuf ops[2];
+    struct sembuf sops[2];
 
-    while (!stopping) {
-        ops[0].sem_num = 0;
-        ops[0].sem_op = 0;
-        ops[0].sem_flg = 0;
-
-        ops[1].sem_num = 0;
-        ops[1].sem_op = 1;
-        ops[1].sem_flg = 0;
+    while (1) {
+	// check that message is empty
+        sops[0].sem_num = 0;
+        sops[0].sem_op = 0;
+        sops[0].sem_flg = 0;
+	// and get semaphore
+        sops[1].sem_num = 0;
+        sops[1].sem_op = 1;
+        sops[1].sem_flg = 0;
 
 
         printf("Trying to get semaphore...\n");
-        if (semop(semid, ops, 2) == -1) {
+        if (semop(semid, sops, 2) == -1) {
             fprintf(stderr, "semop failed\n");
             exit(1);
         }
@@ -69,16 +57,18 @@ int main() {
         fgets((char *) shm, message_len, stdin);
         ((char *) shm)[strlen((char *) shm) - 1] = '\0';
 
-        ops[0].sem_num = 1;
-        ops[0].sem_op = 1;
-        ops[0].sem_flg = 0;
+	// signal to server that message was written
+        sops[0].sem_num = 1;
+        sops[0].sem_op = 1;
+        sops[0].sem_flg = 0;
 
-        if (semop(semid, ops, 1) == -1) {
+        if (semop(semid, sops, 1) == -1) {
             fprintf(stderr, "semop failed\n");
             exit(1);
         }
     }
 
+    // detach shared memory
     if (shmdt(shm) == -1) {
         fprintf(stderr, "shmdt failed\n");
         exit(1);
