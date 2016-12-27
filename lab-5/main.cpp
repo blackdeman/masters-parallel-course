@@ -90,7 +90,8 @@ int main(int argc, char** argv) {
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    for (int i = 0; i < size; ++i) {
+    // all process may print their matrixes
+    /*for (int i = 0; i < size; ++i) {
         if (myrank == i) {
             printf("Process #%d matrix part:\n", myrank);
             for (int j = 0; j < rows_per_proc; ++j) {
@@ -102,6 +103,14 @@ int main(int argc, char** argv) {
             printf("\n");
         }
         MPI_Barrier(MPI_COMM_WORLD);
+    }*/
+
+    if (myrank == size - 1) {
+        printf("Process #%d last row:\n", myrank);
+    	for (int k = 0; k < N2; ++k) {
+            printf("%4d ", matrix_part[(rows_per_proc - 1) * N2 + k]);
+        }
+        printf("\n");
     }
 
     MPI_Finalize();
