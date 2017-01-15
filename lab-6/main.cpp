@@ -1,6 +1,7 @@
 #include <mpi.h>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <utility>
 
 void printLocals(int rank, int size, int stripeSize, int N, int * localRowStripe, int * localColStripe, int * localResult) {
@@ -59,6 +60,8 @@ int main(int argc, char** argv) {
     int rank;
     int size;
 
+    srand (time(NULL));
+
     MPI_Init(&argc, &argv);
 
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -70,8 +73,10 @@ int main(int argc, char** argv) {
         B = new int[N * N];
 
         for (int i = 0; i < N * N; ++i) {
-            A[i] = i;
-            B[i] = i;
+            A[i] = rand() % 10;
+            B[i] = rand() % 10;
+//            A[i] = i;
+//            B[i] = i;
         }
         printMatrix((char *) "A", A, N);
         printMatrix((char *) "B", B, N);
@@ -116,7 +121,9 @@ int main(int argc, char** argv) {
 
     if (rank == 0) {
         MPI_Type_vector(N, 1, N, MPI_INT, &_colType);
+//        MPI_Type_vector(N, stripeSize, N, MPI_INT, &_colType);
         MPI_Type_create_resized(_colType, 0, sizeof(int), &colType);
+//        MPI_Type_create_resized(_colType, 0, stripeSize * sizeof(int), &colType);
         MPI_Type_commit(&colType);
     }
 
@@ -125,6 +132,7 @@ int main(int argc, char** argv) {
 
     // send col stripes of matrix B to other processes
     MPI_Scatter(B, stripeSize, colType, localColStripeComm, stripeSize * N, MPI_INT, 0, MPI_COMM_WORLD);
+//    MPI_Scatter(B, 1, colType, localColStripeComm, stripeSize * N, MPI_INT, 0, MPI_COMM_WORLD);
 
     for (int iter = 0; iter < size; ++iter) {
 //        if (rank == 0)
@@ -136,17 +144,18 @@ int main(int argc, char** argv) {
         std::swap(localColStripeComm, localColStripeCompute);
 
         if (iter < size - 1) {
-            MPI_Isend(localColStripeCompute, stripeSize * N, MPI_INT, nextProc, 42, MPI_COMM_WORLD, &sendRequest);
-            MPI_Irecv(localColStripeComm, stripeSize * N, MPI_INT, prevProc, 42, MPI_COMM_WORLD, &recvRequest);
+            MPI_Isend(localColStripeCompute, stripeSize * N, MPI_INT, prevProc, 42, MPI_COMM_WORLD, &sendRequest);
+            MPI_Irecv(localColStripeComm, stripeSize * N, MPI_INT, nextProc, 42, MPI_COMM_WORLD, &recvRequest);
         }
 
         // computation (localColStripeCompute is transposed!)
         for (int i = 0; i < stripeSize; ++i) {
             for (int j = 0; j < stripeSize; ++j) {
-                int resultIndex = stripeSize * ((rank + iter) % size) + j * N + i;
+                int resultIndex = stripeSize * ((rank + iter) % size) + i * N + j;
                 localResult[resultIndex] = 0;
                 for (int k = 0; k < N; ++k) {
                     localResult[resultIndex] += localRowStripe[i * N + k] * localColStripeCompute[j * N + k];
+//                    localResult[resultIndex] += localRowStripe[i * N + k] * localColStripeCompute[k * stripeSize + j];
                 }
             }
         }
